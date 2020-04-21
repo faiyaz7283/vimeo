@@ -1,0 +1,46 @@
+# for running tests docker-compose up --build --exit-code-from esexecutor
+# for development docker-compose up --build
+version: '3'
+services:
+  elasticsearch:
+    container_name: elasticsearch
+    image: elasticsearch:7.4.2
+    ports:
+      - "9200:9200"
+    environment:
+      - http.host=0.0.0.0
+      - transport.host=127.0.0.1
+      - xpack.security.enabled=false
+    volumes:
+      - ./snapshot:/snapshot
+      - ./conf/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+  loader:
+    container_name: loader
+    build:
+      dockerfile: Dockerfile.loader
+      context: .
+    depends_on:
+      - elasticsearch
+    links:
+      - elasticsearch
+    command: ["./wait-for-es.sh", "http://elasticsearch:9200", "python", "loader/data_loader.py"]
+    working_dir: "/src"
+    volumes:
+      - ./src:/src
+      - ./snapshot:/snapshot
+  searchapi:
+    container_name: searchapi
+    build:
+      dockerfile: Dockerfile.searchapi
+      context: .
+    ports:
+      - "9250:9250"
+    depends_on:
+      - elasticsearch
+      - loader
+    links:
+      - elasticsearch
+    command: ["./wait-for-es.sh", "http://elasticsearch:9200", "python", "searchapi/searchapi.py"]
+    working_dir: "/src"
+    volumes:
+      - ./src:/src

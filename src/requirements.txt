@@ -1,0 +1,4 @@
+elasticsearch>=6.0.0
+bs4
+requests
+lxml
